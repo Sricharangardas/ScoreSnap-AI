@@ -1,0 +1,24 @@
+name: ScoreSnap AI Background Cron
+
+on:
+  schedule:
+    # Run every 15 minutes to keep server awake and monitor live fixtures
+    - cron: '*/15 * * * *'
+    # Run daily digest at 03:00 UTC (08:30 AM IST)
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allow manual triggers from the GitHub Actions tab
+
+jobs:
+  ping-cron-endpoints:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Match Monitor Agent
+        run: |
+          # Replace the URL below with your actual deployed Render backend URL
+          curl -s -X GET "https://scoresnap-backend.onrender.com/api/cron/monitor"
+          
+      - name: Trigger Daily Digest Agent (Only runs on the daily schedule or manual trigger)
+        if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          # Replace the URL below with your actual deployed Render backend URL
+          curl -s -X GET "https://scoresnap-backend.onrender.com/api/cron/digest"

@@ -1,0 +1,27 @@
+# Environment variables (API keys)
+.env
+backend/.env
+frontend/.env
+
+# Python caching
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local databases
+backend/*.db
+*.db
+
+# Virtual environments
+venv/
+backend/venv/
+
+# Frontend dependencies and builds
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# System-specific files
+.DS_Store
+Thumbs.db
