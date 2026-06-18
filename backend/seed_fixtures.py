@@ -9,12 +9,13 @@ Base.metadata.create_all(bind=engine)
 def seed_database():
     db: Session = SessionLocal()
     
-    # Truncate existing standings and matches for clean reseeding
-    print("Clearing old matches and standings...")
-    db.query(Standings).delete()
-    db.query(Match).delete()
-    db.commit()
-
+    # Check if database is already seeded
+    match_count = db.query(Match).count()
+    if match_count > 0:
+        print("Database already has matches. Skipping seeding to preserve data.")
+        db.close()
+        return
+        
     print("Seeding database with the actual World Cup 2026 fixtures schedule...")
 
     matches = [
