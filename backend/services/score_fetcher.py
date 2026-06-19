@@ -85,8 +85,8 @@ Return a JSON object with these exact keys:
 Respond ONLY with the raw JSON object, no markdown formatting blocks, no ```json tags.
 """
         try:
-            # Using gemini-3.5-flash which is active and has quota on your key
-            model = genai.GenerativeModel("gemini-3.5-flash")
+            # Using gemini-2.5-flash which is active and has quota on your key
+            model = genai.GenerativeModel("gemini-2.5-flash")
             response = model.generate_content(prompt)
             text = response.text.strip()
             

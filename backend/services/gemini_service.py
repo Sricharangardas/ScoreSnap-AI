@@ -13,7 +13,7 @@ else:
 class GeminiService:
     @staticmethod
     def get_model():
-        return genai.GenerativeModel("gemini-3.5-flash")
+        return genai.GenerativeModel("gemini-2.5-flash")
 
     @classmethod
     def generate_match_stats(cls, team_1: str, team_2: str, score_1: int, score_2: int) -> Dict[str, Any]:
@@ -26,12 +26,12 @@ class GeminiService:
             return cls._get_mock_stats(team_1, team_2, score_1, score_2)
 
         prompt = f"""
-        Generate a highly realistic set of football match statistics and timeline events for a FIFA World Cup 2026 match.
-        Match: {team_1} ({score_1}) vs {team_2} ({score_2}).
+        Search for and retrieve the actual details for this real FIFA World Cup 2026 match:
+        {team_1} ({score_1}) vs {team_2} ({score_2}).
+        
+        Retrieve the ACTUAL player names who scored the goals, their scoring minutes, the actual player of the match, and realistic match statistics.
         
         The result must strictly have {team_1} scoring {score_1} goal(s) and {team_2} scoring {score_2} goal(s).
-        Include realistic players on the rosters for both teams as of 2026.
-        Include realistic minutes for scorers, assists, cards, shots, possession, corners, expected goals (xG), and player of the match.
         Return the response in JSON format matching this schema:
         {{
             "possession_1": int (possession percentage for team 1, e.g. 55),
