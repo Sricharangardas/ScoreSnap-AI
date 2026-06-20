@@ -15,10 +15,10 @@ jobs:
       - name: Trigger Match Monitor Agent
         run: |
           # Replace the URL below with your actual deployed Render backend URL
-          curl -s -X GET "https://scoresnap-backend.onrender.com/api/cron/monitor"
+          curl -s --retry 3 --retry-delay 5 --retry-connrefused -X GET "https://scoresnap-backend.onrender.com/api/cron/monitor"
           
       - name: Trigger Daily Digest Agent (Only runs on the daily schedule or manual trigger)
         if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
         run: |
           # Replace the URL below with your actual deployed Render backend URL
-          curl -s -X GET "https://scoresnap-backend.onrender.com/api/cron/digest"
+          curl -s --retry 3 --retry-delay 5 --retry-connrefused -X GET "https://scoresnap-backend.onrender.com/api/cron/digest"
