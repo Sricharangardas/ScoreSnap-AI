@@ -16,6 +16,28 @@ class GeminiService:
         return genai.GenerativeModel("gemini-2.5-flash")
 
     @classmethod
+    def _call_gemini_with_retry(cls, prompt: str, generation_config: Dict[str, Any] = None) -> str:
+        import time
+        retries = 3
+        delay = 15
+        for attempt in range(retries):
+            try:
+                model = cls.get_model()
+                response = model.generate_content(
+                    prompt,
+                    generation_config=generation_config
+                )
+                return response.text
+            except Exception as e:
+                err_msg = str(e)
+                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                    if attempt < retries - 1:
+                        print(f"[GeminiService] Rate limit (429) hit. Sleeping for {delay} seconds before retrying...")
+                        time.sleep(delay)
+                        continue
+                raise e
+
+    @classmethod
     def generate_match_stats(cls, team_1: str, team_2: str, score_1: int, score_2: int) -> Dict[str, Any]:
         """
         Agent 2 - Generates realistic stats and event timeline matching the final score.
@@ -58,12 +80,11 @@ class GeminiService:
         }}
         """
         try:
-            model = cls.get_model()
-            response = model.generate_content(
+            response_text = cls._call_gemini_with_retry(
                 prompt,
                 generation_config={"response_mime_type": "application/json"}
             )
-            return json.loads(response.text)
+            return json.loads(response_text)
         except Exception as e:
             print(f"Error calling Gemini for match stats: {e}")
             return cls._get_mock_stats(team_1, team_2, score_1, score_2)
@@ -97,12 +118,11 @@ class GeminiService:
         }}
         """
         try:
-            model = cls.get_model()
-            response = model.generate_content(
+            response_text = cls._call_gemini_with_retry(
                 prompt,
                 generation_config={"response_mime_type": "application/json"}
             )
-            return json.loads(response.text)
+            return json.loads(response_text)
         except Exception as e:
             print(f"Error calling Gemini for match analysis: {e}")
             return cls._get_mock_analysis(match_data, language)
@@ -132,12 +152,11 @@ class GeminiService:
         }}
         """
         try:
-            model = cls.get_model()
-            response = model.generate_content(
+            response_text = cls._call_gemini_with_retry(
                 prompt,
                 generation_config={"response_mime_type": "application/json"}
             )
-            return json.loads(response.text)
+            return json.loads(response_text)
         except Exception as e:
             print(f"Error calling Gemini for daily digest: {e}")
             return cls._get_mock_digest(completed_matches)
@@ -169,12 +188,11 @@ class GeminiService:
         }}
         """
         try:
-            model = cls.get_model()
-            response = model.generate_content(
+            response_text = cls._call_gemini_with_retry(
                 prompt,
                 generation_config={"response_mime_type": "application/json"}
             )
-            return json.loads(response.text)
+            return json.loads(response_text)
         except Exception as e:
             print(f"Error calling Gemini for prediction: {e}")
             return {

@@ -41,7 +41,7 @@ Respond ONLY with the raw JSON object, no markdown formatting blocks, no ```json
 """
     
     try:
-        model = genai.GenerativeModel("gemini-3.5-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(prompt)
         text = response.text.strip()
         # Clean up any potential markdown fences
@@ -57,6 +57,6 @@ Respond ONLY with the raw JSON object, no markdown formatting blocks, no ```json
         return None
 
 if __name__ == "__main__":
-    score = get_match_score("Germany", "Curaçao", "June 14, 2026")
+    score = get_match_score("Spain", "Saudi Arabia", "June 21, 2026")
     print("\nResult:")
     print(score)
