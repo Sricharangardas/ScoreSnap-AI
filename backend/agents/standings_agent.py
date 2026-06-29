@@ -27,6 +27,8 @@ class StandingsAgent:
 
         # Process stats from completed matches
         for match in completed_matches:
+            if "group" not in match.group_name.lower():
+                continue
             t1_stats = get_team_stats(match.group_name, match.team_1)
             t2_stats = get_team_stats(match.group_name, match.team_2)
 
@@ -56,6 +58,8 @@ class StandingsAgent:
         # Also pull in any teams scheduled but who haven't played, to ensure they appear in tables
         all_matches = db.query(Match).all()
         for match in all_matches:
+            if "group" not in match.group_name.lower():
+                continue
             get_team_stats(match.group_name, match.team_1)
             get_team_stats(match.group_name, match.team_2)
 

@@ -70,8 +70,8 @@ export default function Matches({ darkMode, user, onOpenMatchSummary }) {
     }
   };
 
-  // Group options in select
-  const groups = ['all', 'Group A', 'Group B', 'Group D', 'Group E', 'Group H', 'Group J'];
+  // Group options calculated dynamically from matches
+  const groups = ['all', ...new Set(matches.map(m => m.group_name))];
 
   // Apply filters in memory
   const filteredMatches = matches.filter(match => {

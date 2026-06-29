@@ -11,6 +11,8 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 class ScoreFetcher:
+    _quota_exhausted = False
+
     @staticmethod
     def get_real_match_score(team_1: str, team_2: str, match_date: datetime.datetime) -> Optional[Dict[str, Any]]:
         """
@@ -24,6 +26,10 @@ class ScoreFetcher:
         }
         or None if parsing failed.
         """
+        if ScoreFetcher._quota_exhausted:
+            print("[ScoreFetcher] Quota is marked as exhausted. Skipping API call.")
+            return None
+
         if not GEMINI_API_KEY:
             print("[ScoreFetcher] GEMINI_API_KEY not configured. Cannot query Gemini for real-world scores.")
             return None
@@ -49,8 +55,9 @@ Return a JSON object with these exact keys:
 Respond ONLY with the raw JSON object, no markdown formatting blocks, no ```json tags.
 """
         import time
+        import re
         retries = 3
-        delay = 15
+        default_delay = 30
         for attempt in range(retries):
             try:
                 print(f"[ScoreFetcher] Querying Gemini with Search Grounding (Attempt {attempt+1}/{retries}): {team_1} vs {team_2} on {date_str}")
@@ -75,9 +82,22 @@ Respond ONLY with the raw JSON object, no markdown formatting blocks, no ```json
             except Exception as e:
                 err_msg = str(e)
                 if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                    if "limit: 20" in err_msg or "Quota exceeded" in err_msg:
+                        print("[ScoreFetcher] Daily quota exceeded (limit: 20). Setting quota_exhausted = True.")
+                        ScoreFetcher._quota_exhausted = True
+                        return None
                     if attempt < retries - 1:
-                        print(f"[ScoreFetcher] Rate limit (429) hit. Sleeping for {delay} seconds before retrying...")
-                        time.sleep(delay)
+                        sleep_time = default_delay
+                        try:
+                            match = re.search(r"Please retry in (\d+\.?\d*)s", err_msg)
+                            if match:
+                                sleep_time = float(match.group(1)) + 1.5
+                                print(f"[ScoreFetcher] Parsed retry delay from error: {sleep_time:.2f}s")
+                        except Exception:
+                            pass
+                        sleep_time = max(15.0, min(sleep_time, 70.0))
+                        print(f"[ScoreFetcher] Rate limit (429) hit. Sleeping for {sleep_time:.2f} seconds before retrying...")
+                        time.sleep(sleep_time)
                         continue
                 print(f"[ScoreFetcher] Gemini parsing error: {e}")
                 return None

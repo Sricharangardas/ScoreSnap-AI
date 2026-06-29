@@ -11,15 +11,22 @@ else:
     print("WARNING: GEMINI_API_KEY environment variable is not set. Gemini features will run in mock mode.")
 
 class GeminiService:
+    _quota_exhausted = False
+
     @staticmethod
     def get_model():
         return genai.GenerativeModel("gemini-2.5-flash")
 
     @classmethod
     def _call_gemini_with_retry(cls, prompt: str, generation_config: Dict[str, Any] = None) -> str:
+        if cls._quota_exhausted:
+            print("[GeminiService] Quota is marked as exhausted. Skipping API call.")
+            raise Exception("429 RESOURCE_EXHAUSTED (cached)")
+
         import time
+        import re
         retries = 3
-        delay = 15
+        default_delay = 30
         for attempt in range(retries):
             try:
                 model = cls.get_model()
@@ -31,9 +38,22 @@ class GeminiService:
             except Exception as e:
                 err_msg = str(e)
                 if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                    if "limit: 20" in err_msg or "Quota exceeded" in err_msg:
+                        print("[GeminiService] Daily quota exceeded (limit: 20). Setting quota_exhausted = True.")
+                        cls._quota_exhausted = True
+                        raise e
                     if attempt < retries - 1:
-                        print(f"[GeminiService] Rate limit (429) hit. Sleeping for {delay} seconds before retrying...")
-                        time.sleep(delay)
+                        sleep_time = default_delay
+                        try:
+                            match = re.search(r"Please retry in (\d+\.?\d*)s", err_msg)
+                            if match:
+                                sleep_time = float(match.group(1)) + 1.5
+                                print(f"[GeminiService] Parsed retry delay from error: {sleep_time:.2f}s")
+                        except Exception:
+                            pass
+                        sleep_time = max(15.0, min(sleep_time, 70.0))
+                        print(f"[GeminiService] Rate limit (429) hit. Sleeping for {sleep_time:.2f} seconds before retrying...")
+                        time.sleep(sleep_time)
                         continue
                 raise e
 
