@@ -1,23 +1,89 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { matchesAPI } from '../services/api';
 
 export default function Bracket() {
   const [highlightedTeam, setHighlightedTeam] = useState(null);
+  const [bracketData, setBracketData] = useState({
+    quarterfinals: [],
+    semifinals: [],
+    final: []
+  });
+  const [loading, setLoading] = useState(true);
 
-  const bracketData = {
-    quarterfinals: [
-      { id: 'q1', team1: 'Argentina', team2: 'Germany', score1: '2', score2: '1', winner: 'Argentina' },
-      { id: 'q2', team1: 'Brazil', team2: 'Spain', score1: '3', score2: '2', winner: 'Brazil' },
-      { id: 'q3', team1: 'France', team2: 'England', score1: '1', score2: '0', winner: 'France' },
-      { id: 'q4', team1: 'Portugal', team2: 'Netherlands', score1: '1(4)', score2: '1(5)', winner: 'Netherlands' },
-    ],
-    semifinals: [
-      { id: 's1', team1: 'Argentina', team2: 'Brazil', score1: '2', score2: '1', winner: 'Argentina', from1: 'q1', from2: 'q2' },
-      { id: 's2', team1: 'France', team2: 'Netherlands', score1: '3', score2: '2', winner: 'France', from1: 'q3', from2: 'q4' },
-    ],
-    final: [
-      { id: 'f1', team1: 'Argentina', team2: 'France', score1: '?', score2: '?', winner: null, from1: 's1', from2: 's2' },
-    ],
-  };
+  useEffect(() => {
+    const fetchBracket = async () => {
+      try {
+        const response = await matchesAPI.getMatches();
+        const allMatches = response.data;
+
+        const getWinner = (m) => {
+          if (m.status !== 'completed') return null;
+          if (m.score_1 > m.score_2) return m.team_1;
+          if (m.score_2 > m.score_1) return m.team_2;
+          
+          // Draw (penalty shootout) fallback check by checking who advanced in next match
+          const nextMatchMap = {
+            "WC26-M91": { id: "WC26-M94", pos: "team_1" },
+            "WC26-M90": { id: "WC26-M94", pos: "team_2" },
+            "WC26-M92": { id: "WC26-M95", pos: "team_1" },
+            "WC26-M93": { id: "WC26-M95", pos: "team_2" },
+            "WC26-M94": { id: "WC26-M97", pos: "team_1" },
+            "WC26-M95": { id: "WC26-M97", pos: "team_2" },
+          };
+          
+          const mapping = nextMatchMap[m.match_id];
+          if (mapping) {
+            const nextMatch = allMatches.find(x => x.match_id === mapping.id);
+            if (nextMatch) {
+              const advancedTeam = mapping.pos === "team_1" ? nextMatch.team_1 : nextMatch.team_2;
+              if (advancedTeam && advancedTeam !== "TBD") {
+                return advancedTeam;
+              }
+            }
+          }
+          return null;
+        };
+
+        const formatMatch = (m_id, id, from1 = null, from2 = null) => {
+          const m = allMatches.find(x => x.match_id === m_id);
+          if (!m) {
+            return { id, team1: 'TBD', team2: 'TBD', score1: '?', score2: '?', winner: null, from1, from2 };
+          }
+          return {
+            id,
+            team1: m.team_1,
+            team2: m.team_2,
+            score1: m.status === 'completed' ? String(m.score_1) : '?',
+            score2: m.status === 'completed' ? String(m.score_2) : '?',
+            winner: getWinner(m),
+            from1,
+            from2
+          };
+        };
+
+        setBracketData({
+          quarterfinals: [
+            formatMatch("WC26-M91", "q1"),
+            formatMatch("WC26-M90", "q2"),
+            formatMatch("WC26-M92", "q3"),
+            formatMatch("WC26-M93", "q4")
+          ],
+          semifinals: [
+            formatMatch("WC26-M94", "s1", "q1", "q2"),
+            formatMatch("WC26-M95", "s2", "q3", "q4")
+          ],
+          final: [
+            formatMatch("WC26-M97", "f1", "s1", "s2")
+          ]
+        });
+      } catch (err) {
+        console.error("Failed to load bracket data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBracket();
+  }, []);
 
   const getTeamClass = (teamName, winnerName) => {
     const isWinner = teamName === winnerName;
@@ -29,6 +95,14 @@ export default function Bracket() {
         : 'text-slate-700 dark:text-slate-300'
     } ${isWinner ? 'text-black dark:text-white font-bold' : 'opacity-60'}`;
   };
+
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center min-h-[400px]">
+        <span className="w-8 h-8 border-4 border-apple-blue-light border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full overflow-x-auto py-6 flex items-center justify-start md:justify-center min-h-[400px]">
